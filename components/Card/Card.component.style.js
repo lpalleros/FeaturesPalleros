@@ -20,9 +20,11 @@ export default StyleSheet.create({
         borderRadius: 100,
     },
     detailContainer: {
-        flexDirection: "column",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
         paddingLeft: 10,
-        width: 210,
+        width: "100%",
     },
     link: {
         marginTop: 'auto',

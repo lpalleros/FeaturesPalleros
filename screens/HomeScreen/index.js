@@ -1,81 +1,82 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, Text, TextInput, StyleSheet, FlatList, Button } from 'react-native';
-import { useSelector,useDispatch } from 'react-redux';
+import { View, TouchableOpacity, Text,StyleSheet, Button } from 'react-native';
+
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { Nav, Card } from '../../components';
-import { ADD_BAND } from "../../store/actions/bands.action";
-import { uuidv4 } from '../../utils/utils';
 import { Audio } from 'expo-av';
 
 const HomeScreen = ({navigation}) => { 
   const [textItem, setTextItem] = useState('');
-  const Bands = useSelector(state => state);
-  const dispatch = useDispatch()
+  const [recording, setRecording] = useState();
+  const [recordings, setRecordings] = useState([]);
 
-  const handleAdd = () => {
-    const newID = uuidv4();
-    const newItem = {id: newID, name: textItem}
-    dispatch({type: ADD_BAND, payload: newItem})
-    setTextItem('');
+  async function stopRecording () {
+    setRecording(undefined);
+    await recording.stopAndUnloadAsync();
+    let updatedRecordings = [...recordings];
+    const {sound, status } = await recording.createNewLoadedSoundAsync();
+    updatedRecordings.push({
+      sound: sound,
+      duration: getDurationFormatted(status.durationMillis),
+      file: recording.getURI(),
+    })
+    setRecordings(updatedRecordings)
+    console.log('stopRecording');
   }
-  
-  const onHandleChangeItem = (text) => {
-    return setTextItem(text)
+
+  function getDurationFormatted(millis) {
+    const minutes = millis /1000 / 60;
+    const minutesDisplay = Math.floor(minutes);
+    const seconds = Math.round((minutes - minutesDisplay) * 60 );
+    const secondsDisplay = seconds < 10 ? `0${seconds}` : seconds;
+    return `${minutesDisplay}:${secondsDisplay}`
   }
-  const [sound, setSound] = React.useState();
 
-  async function playSound() {
-    console.log('Loading Sound');
-    const { sound } = await Audio.Sound.createAsync(
-       require('../../assets/priority.wav')
-    );
-    setSound(sound);
+  async function startRecording () {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if(permission.status === 'granted'){
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+        const { recording } = await Audio.Recording.createAsync(
+          Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+        )
+        setRecording(recording)
+      } else {
+        console.log('please grant permission')
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    console.log('startRecording');
+  };
 
-    console.log('Playing Sound');
-    await sound.playAsync(); }
-
-  React.useEffect(() => {
-    return sound
-      ? () => {
-          console.log('Unloading Sound');
-          sound.unloadAsync(); }
-      : undefined;
-  }, [sound]);
-
+  function getRecordingLines() {
+    return recordings.map((recordingLine, index) => {
+      return (
+        <View key={index}>
+          <TouchableOpacity onPress={() => recordingLine.sound.replayAsync()} title="Play">
+            <Card text={'Recording ' + index} key={index}> 
+              <FontAwesome name='play' size={16} color="black" />
+            </Card>
+          </TouchableOpacity>
+        </View>
+      )
+    });
+  }
   return (
     <View >
       <Nav/>
       <View>
         <Text style={styles.title}>
-          Your Bands
+          Record your audio.
         </Text>
-        <View style={styles.container}>
-          <Button title="Play Sound" onPress={playSound} />
-        </View>
-        <View style={styles.form}>
-          <TextInput 
-            placeholder='Add a new band'
-            value={textItem}
-            onChangeText={onHandleChangeItem}
-            style={styles.input}
-          />
-          <TouchableOpacity onPress={handleAdd}>
-            <Text style={styles.title}><FontAwesome name='plus' color="#000" size={22} /></Text>
-          </TouchableOpacity>
-        </View>
+        <Button title={recording  ? "STOP" : "START"} onPress={recording  ? stopRecording : startRecording }/>
+        {getRecordingLines()}
       </View>
-      <View >
-        <FlatList 
-          data={Bands.bands}
-          renderItem={ data => (
-            <TouchableOpacity>
-              <Card text={data.item.name} key={data.item.id}/>
-            </TouchableOpacity>
-          )}
-          keyExtractor= {(item) => item.id}
-        />
-      </View>
-    </View>
+    </View> 
   )
 }
 

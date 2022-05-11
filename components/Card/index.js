@@ -8,6 +8,7 @@ const Card = (props) => {
     <View style={styles.container}>
         <View style={styles.detailContainer}>
             <Text style={styles.title}>{props.text}</Text>
+            {props.children}
         </View>
     </View>
   )
