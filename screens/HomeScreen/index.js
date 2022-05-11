@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { View, TouchableOpacity, Text, TextInput, StyleSheet, FlatList } from 'react-native';
+import React, { useState } from 'react';
+import { View, TouchableOpacity, Text, TextInput, StyleSheet, FlatList, Button } from 'react-native';
 import { useSelector,useDispatch } from 'react-redux';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { Nav, Card } from '../../components';
 import { ADD_BAND } from "../../store/actions/bands.action";
 import { uuidv4 } from '../../utils/utils';
+import { Audio } from 'expo-av';
 
 const HomeScreen = ({navigation}) => { 
   const [textItem, setTextItem] = useState('');
@@ -21,6 +22,26 @@ const HomeScreen = ({navigation}) => {
   const onHandleChangeItem = (text) => {
     return setTextItem(text)
   }
+  const [sound, setSound] = React.useState();
+
+  async function playSound() {
+    console.log('Loading Sound');
+    const { sound } = await Audio.Sound.createAsync(
+       require('../../assets/priority.wav')
+    );
+    setSound(sound);
+
+    console.log('Playing Sound');
+    await sound.playAsync(); }
+
+  React.useEffect(() => {
+    return sound
+      ? () => {
+          console.log('Unloading Sound');
+          sound.unloadAsync(); }
+      : undefined;
+  }, [sound]);
+
   return (
     <View >
       <Nav/>
@@ -28,6 +49,9 @@ const HomeScreen = ({navigation}) => {
         <Text style={styles.title}>
           Your Bands
         </Text>
+        <View style={styles.container}>
+          <Button title="Play Sound" onPress={playSound} />
+        </View>
         <View style={styles.form}>
           <TextInput 
             placeholder='Add a new band'
