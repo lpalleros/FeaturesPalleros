@@ -1,0 +1,1 @@
+export const ADD_BAND = 'ADD_BAND'
